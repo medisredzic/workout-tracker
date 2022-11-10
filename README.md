@@ -1,18 +1,18 @@
 <br />
 <div align="center">
   <a href="https://github.com/medisredzic/workout-tracker">
-    <img src="logo.png" alt="Logo" width="80" height="80">
+    <img src="logo.png" alt="Logo" width="366" height="150">
   </a>
 
   <h3 align="center">Workout Tracker</h3>
 
-  [![Screenshot][screenshot]](https://github.com/medisredzic/workout-tracker/look.png)
+  [![Screenshot][screenshot]](https://raw.githubusercontent.com/medisredzic/workout-tracker/main/look.png)
 </div>
 
 ### Built With
 
 
-* [![Javascript][Javascript]]
+* [![Javascript][Javascript]][Javascript-url]
 
 
 ## Functions
