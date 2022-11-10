@@ -8,19 +8,19 @@
 
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style/style.css" />
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.2/dist/leaflet.css" integrity="sha256-sA+zWATbFveLLNqWO2gtiw3HL/lh1giY/Inf1BJ0z14=" crossorigin="" />
   <script defer src="https://unpkg.com/leaflet@1.9.2/dist/leaflet.js" integrity="sha256-o9N1jGDZrf5tS+Ft4gbIK7mYMipq9lqpVJ91xHSyKhg=" crossorigin=""></script>
 
-  <script defer src="script.js"></script>
+  <script defer src="script/script.js"></script>
   <title>Workout Tracker</title>
 </head>
 
 <body>
   <div class="sidebar">
-    <img src="logo.png" alt="Logo" class="logo" />
-
+    <img src="images/logo.png" alt="Logo" class="logo" />
+    <p class="errorMessage" hidden></p>
     <ul class="workouts">
       <form class="form hidden">
         <div class="form__row">
@@ -49,8 +49,10 @@
         <button class="form__btn">OK</button>
       </form>
     </ul>
+    <p class="deleteAll">
+      <a href="#" class="deleteAll__btn">DELETE ALL WORKOUTS</a>
+    </p>
   </div>
-
   <div id="map"></div>
 </body>
 
