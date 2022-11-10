@@ -134,7 +134,7 @@ a:visited {
   gap: 0.5rem 2.5rem;
 
   /* Match height and activity boxes */
-  height: 9.25rem;
+  height: 10.25rem;
   transition: all 0.5s, transform 1ms;
 }
 
@@ -179,6 +179,14 @@ a:visited {
 
 .form__btn {
   display: none;
+}
+
+.saveChanges__btn {
+  font-size: 1.5rem;
+}
+
+.discardChanges__btn {
+  font-size: 1.5rem;
 }
 
 .deleteAll {

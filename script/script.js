@@ -13,6 +13,9 @@ const deleteAllBtn = document.querySelector('.deleteAll__btn');
 const recenterMapBtn = document.querySelector('.recenterMap__btn');
 const errorMessage = document.querySelector('.errorMessage');
 
+const saveChangesBtn = document.querySelector('.saveChanges__btn');
+const discardChangesBtn = document.querySelector('.discardChanges__btn');
+
 // Workout class that serves as parent to different workout types
 class Workout {
 
@@ -84,6 +87,7 @@ class App {
     #workouts = [];
     #mapZoomL = 13;
     #allMarkers = [];
+    #currentAction = 'creating';
 
     constructor() {
         this._getPosition(); // Get position and check if user allowed access
@@ -92,7 +96,7 @@ class App {
 
         form.addEventListener('submit', this._newWorkout.bind(this)); // Event listener to submit data when Enter is pressed
         inputType.addEventListener('change', this._toggleElevationField); // Event listener to shift between different workouts and change their input fields respectively
-        containerWorkouts.addEventListener('click', this._moveToPopup.bind(this)); // Event listener to remove input form after Workout has been submitted
+        containerWorkouts.addEventListener('click', this._containerListen.bind(this)); // Event listener to remove input form after Workout has been submitted
 
         deleteAllBtn.addEventListener('click', this._deleteAllWorkouts.bind(this)); // Delete all workouts
 
@@ -130,12 +134,22 @@ class App {
     }
 
     _showForm(mapE) { // Show input form in container
+        if (this.#currentAction === 'editing') {
+            saveChangesBtn.hidden = false;
+            discardChangesBtn.hidden = false;
+            inputType.disabled = true;
+        }
         form.classList.remove('hidden');
         inputDistance.focus();
         this.#mapEvent = mapE;
     }
 
     _hideForm() { // Hide input form in container
+        if (this.#currentAction === 'editing') {
+            saveChangesBtn.hidden = true;
+            discardChangesBtn.hidden = true;
+            this.#currentAction = 'creating';
+        }
         inputDistance.value = inputDuration.value = inputCadence.value = inputElevation.value = '';
         form.style.display = 'none';
         form.classList.add('hidden');
@@ -214,7 +228,7 @@ class App {
         this.#allMarkers.push(mark);
     }
 
-    _renderWorkout(workout) {
+    _renderWorkout(workout, edit) {
         let html = `
         <li class="workout workout--${workout.type}" data-id="${workout.id}">
         <h2 class="workout__title">${workout.description}</h2>
@@ -242,6 +256,7 @@ class App {
                 <span class="workout__unit">spm</span>
             </div>
             <a href="#" data-id="${workout.id}" class="workout__delete"> DELETE </a>
+            <a href="#" class="workout__edit"> EDIT </a>
         </li>`;
         }
 
@@ -257,24 +272,29 @@ class App {
             <span class="workout__unit">m</span>
           </div>
           <a href="#" data-id="${workout.id}" class="workout__delete"> DELETE </a>
+          <a href="#" class="workout__edit"> EDIT </a>
         </li>`
         }
 
         form.insertAdjacentHTML('afterend', html);
     }
-
-    _moveToPopup(e) { // When clicked on container either remove workout(When clicked on Delete) or reposition to the workout on map(When clicked on rest of workout class)
+    _containerListen(e) { // When clicked on container either remove workout(When clicked on Delete) or reposition to the workout on map(When clicked on rest of workout class)
         const trg = e.target;
 
         if (trg.classList[0] === 'workout__delete') {
             this._deleteWorkout(trg)
         }
 
+
         const workoutEl = e.target.closest('.workout');
 
         if (!workoutEl) return;
 
         const workout = this.#workouts.find(work => work.id === workoutEl.dataset.id);
+
+        if (trg.classList[0] === 'workout__edit') {
+            return this._editWorkout(workout)
+        }
 
         if (!workout) return;
 
@@ -285,6 +305,49 @@ class App {
             },
         });
 
+    }
+
+    _editWorkout(workout) {
+
+        const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(parseInt(inp)));
+        const allPositive = (...inputs) => inputs.every(inp => parseInt(inp) > 0);
+
+        this.#currentAction = 'editing';
+
+        inputDistance.value = workout.distance;
+        inputDuration.value = workout.duration;
+        inputCadence.value = workout.cadence;
+        inputElevation.value = workout.elevation;
+
+        this._showForm();
+
+        discardChangesBtn.addEventListener('click', () => {
+            this._hideForm();
+        });
+
+        saveChangesBtn.addEventListener('click', (e) => {
+
+            if (validInputs(inputDistance.value, inputDuration.value) && allPositive(inputDistance.value, inputDuration.value)) {
+                workout.distance = inputDistance.value;
+                workout.duration = inputDuration.value;
+            } else return this._errorMessage('Data must be positive');
+            if (workout.type === 'running') {
+                if (validInputs(inputCadence.value) && allPositive(inputCadence.value)) workout.cadence = inputCadence.value;
+                else return this._errorMessage('Data must be positive');
+            }
+            if (workout.type === 'cycling') {
+                if (validInputs(inputElevation.value) && allPositive(inputElevation.value)) workout.elevation = inputElevation.value;
+                else return this._errorMessage('Data must be positive');
+            }
+            this._updateContainer(workout)
+            this._setLocalStorage();
+            this._hideForm();
+        });
+
+    }
+
+    _updateContainer(workout) {
+        location.reload();
     }
 
     _setLocalStorage() {
@@ -317,6 +380,7 @@ class App {
 
     _deleteWorkout(e) { // Delete workouts, remove markers, remove DOM elements and update LocalStorage
         if (!e) return;
+        if (this.#currentAction === 'editing') return this._errorMessage('Can not delete while editing!');
 
         for (const [i, n] of this.#workouts.entries()) {
             if (n.id === e.dataset.id) {
