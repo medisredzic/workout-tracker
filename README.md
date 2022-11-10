@@ -6,7 +6,7 @@
 
   <h3 align="center">Workout Tracker</h3>
 
-  [![Product Name Screen Shot][product-screenshot]]
+  ![Product Name Screen Shot][product-screenshot]
 </div>
 
 ### Built With
