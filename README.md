@@ -12,9 +12,9 @@
 ### Built With
 
 
-* [![Javascript][Javascript]]
-* [![HTML][HTML]]
-* [![CSS][CSS]]
+* ![Javascript][Javascript]
+* ![HTML][HTML]
+* ![CSS][CSS]
 
 
 ## Functions
