@@ -1,6 +1,7 @@
 'use strict';
 
 
+// Get DOM elements
 const form = document.querySelector('.form');
 const containerWorkouts = document.querySelector('.workouts');
 const inputType = document.querySelector('.form__input--type');
@@ -9,9 +10,10 @@ const inputDuration = document.querySelector('.form__input--duration');
 const inputCadence = document.querySelector('.form__input--cadence');
 const inputElevation = document.querySelector('.form__input--elevation');
 const deleteAllBtn = document.querySelector('.deleteAll__btn');
-
+const recenterMapBtn = document.querySelector('.recenterMap__btn');
 const errorMessage = document.querySelector('.errorMessage');
 
+// Workout class that serves as parent to different workout types
 class Workout {
 
     date = new Date();
@@ -22,12 +24,12 @@ class Workout {
         this.distance = distance;
         this.duration = duration;
 
-        if (!id) this.id = Date.now() + ''.slice(-10);
+        if (!id) this.id = Date.now() + ''.slice(-10); // If data is fetched from storage use ID that is defined there, if not create new ID
         else this.id = id
 
     }
 
-    setDescription() {
+    setDescription() { // Create description of exercise(Simple), TODO: Add GeoLocation of workout(eg. Running in Barcelona, Spain)
         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         this.description = `${this.type[0].toUpperCase()}${this.type.slice(1)} on ${months[this.date.getMonth()]} ${this.date.getDate()}`;
     }
@@ -84,37 +86,42 @@ class App {
     #allMarkers = [];
 
     constructor() {
-        this._getPosition();
+        this._getPosition(); // Get position and check if user allowed access
 
-        this._getLocalStorage();
+        this._getLocalStorage(); // Load data from LocalStorage
 
-        form.addEventListener('submit', this._newWorkout.bind(this));
-        inputType.addEventListener('change', this._toggleElevationField);
-        containerWorkouts.addEventListener('click', this._moveToPopup.bind(this));
+        form.addEventListener('submit', this._newWorkout.bind(this)); // Event listener to submit data when Enter is pressed
+        inputType.addEventListener('change', this._toggleElevationField); // Event listener to shift between different workouts and change their input fields respectively
+        containerWorkouts.addEventListener('click', this._moveToPopup.bind(this)); // Event listener to remove input form after Workout has been submitted
 
-        deleteAllBtn.addEventListener('click', this._deleteAllWorkouts.bind(this));
+        deleteAllBtn.addEventListener('click', this._deleteAllWorkouts.bind(this)); // Delete all workouts
+
+        recenterMapBtn.addEventListener('click', this._recenterMap.bind(this)); // Recenter map to view all workouts at once
 
     }
 
     _getPosition() {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(this._loadMap.bind(this), this._errorMessage('Could not get your position!'));
+            navigator.geolocation.getCurrentPosition(this._loadMap.bind(this), () => {
+                this._errorMessage('Could not get your position!')
+            });
         };
     }
 
     _loadMap(position) {
-        const { latitude } = position.coords;
+        const { latitude } = position.coords; // Lat and lng gotten from _getPosition()
         const { longitude } = position.coords;
 
         const cords = [latitude, longitude];
 
-        this.#map = L.map('map').setView(cords, this.#mapZoomL);
+        this.#map = L.map('map').setView(cords, this.#mapZoomL); // Create map instance
 
-        L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(this.#map);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(this.#map); // Create map layer and append it to map instance
 
-        // Handling clicks on map
+        // Handle clicks to open input form
         this.#map.on('click', this._showForm.bind(this));
 
         this.#workouts.forEach(work => {
@@ -122,33 +129,30 @@ class App {
         });
     }
 
-    _showForm(mapE) {
+    _showForm(mapE) { // Show input form in container
         form.classList.remove('hidden');
         inputDistance.focus();
         this.#mapEvent = mapE;
     }
 
-    _hideForm() {
-        // Empty inputs
+    _hideForm() { // Hide input form in container
         inputDistance.value = inputDuration.value = inputCadence.value = inputElevation.value = '';
         form.style.display = 'none';
         form.classList.add('hidden');
         setTimeout(() => form.style.display = 'grid', 1000);
     }
 
-    _toggleElevationField() {
+    _toggleElevationField() { // Switch between cadence(running) and elevation(cycling) input options
         inputElevation.closest('.form__row').classList.toggle('form__row--hidden');
         inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
     }
 
-    _newWorkout(e) {
+    _newWorkout(e) { // Creation of new workout
         e.preventDefault();
 
+        // Validate inputs
         const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
-
         const allPositive = (...inputs) => inputs.every(inp => inp > 0);
-
-        // getting data from a form
 
         const type = inputType.value;
 
@@ -159,6 +163,7 @@ class App {
 
         let workout;
 
+        // Create workout based on selected type from user
         if (type === 'running') {
             const cadence = parseInt(inputCadence.value);
 
@@ -176,16 +181,19 @@ class App {
 
             workout = new Cycling([lat, lng], distance, duration, elevation);
         }
+        // Add newly created workout to preexisting array
         this.#workouts.push(workout)
 
+        // Create workout marker and popup
         this._renderWorkoutMarker(workout);
 
+        // Add workout to DOM -> to workout container
         this._renderWorkout(workout);
 
+        // Hide input form
         this._hideForm();
 
-        // Local storage
-
+        // Override storage with new workout(plus the old ones)
         this._setLocalStorage();
     }
 
@@ -255,7 +263,7 @@ class App {
         form.insertAdjacentHTML('afterend', html);
     }
 
-    _moveToPopup(e) {
+    _moveToPopup(e) { // When clicked on container either remove workout(When clicked on Delete) or reposition to the workout on map(When clicked on rest of workout class)
         const trg = e.target;
 
         if (trg.classList[0] === 'workout__delete') {
@@ -283,7 +291,7 @@ class App {
         localStorage.setItem('workouts', JSON.stringify(this.#workouts));
     }
 
-    _getLocalStorage() {
+    _getLocalStorage() { // Load data from LocalStorage and create new instances of workouts
         const data = JSON.parse(localStorage.getItem('workouts'));
 
         if (!data) return;
@@ -307,7 +315,7 @@ class App {
 
     }
 
-    _deleteWorkout(e) {
+    _deleteWorkout(e) { // Delete workouts, remove markers, remove DOM elements and update LocalStorage
         if (!e) return;
 
         for (const [i, n] of this.#workouts.entries()) {
@@ -347,7 +355,19 @@ class App {
         }, 5000)
     }
 
-    reset() {
+    _recenterMap() { // Recenter the map so all workouts can be seen.
+        if (this.#workouts.length === 0) return;
+
+        let tmp = []
+
+        for (const n of this.#workouts) {
+            tmp.push(n.coords)
+        }
+
+        this.#map.fitBounds(tmp);
+    }
+
+    reset() { // Delete everything from localstorage and reload the page.
         localStorage.removeItem('workouts');
         location.reload();
     }

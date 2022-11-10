@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/medisredzic/workout-tracker">
-    <img src="logo.png" alt="Logo" width="366" height="150">
+    <img src="images/logo.png" alt="Logo" width="366" height="150">
   </a>
 
   <h3 align="center">Workout Tracker</h3>
@@ -25,6 +25,7 @@
 - [x] Delete workout.
 - [x] Retrieve previous workouts (LocalStorage)
 - [x] Delete all workouts
+- [x] Recenter map to include all workouts
  __________________________
 - [ ] Edit workout
 - [ ] Draw lines and sheaps instead of placing markers.
