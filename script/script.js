@@ -127,13 +127,6 @@ class App {
             zoomSnap: 5,
         }).addTo(this.#map); // Create map layer and append it to map instance
 
-        var latlngs = [[37, -109.05], [41, -109.03], [41, -102.05], [37, -102.04]];
-
-        var polygon = L.polygon(latlngs, { color: 'red' }).addTo(this.#map);
-
-        // zoom the map to the polygon
-        map.fitBounds(polygon.getBounds());
-
         // Handle clicks to open input form
         this.#map.on('click', this._showForm.bind(this));
 
