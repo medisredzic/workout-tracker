@@ -26,7 +26,7 @@
 - [x] Retrieve previous workouts (LocalStorage)
 - [x] Delete all workouts
 - [x] Recenter map to include all workouts
-- [x] Edit workout (First implementation -> New update with better code is comming soon!)
+- [x] Edit workout
  __________________________
 - [ ] Draw lines and sheaps instead of placing markers.
 - [ ] Workout description based on GeoLocation (API)

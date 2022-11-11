@@ -16,6 +16,7 @@ const errorMessage = document.querySelector('.errorMessage');
 const saveChangesBtn = document.querySelector('.saveChanges__btn');
 const discardChangesBtn = document.querySelector('.discardChanges__btn');
 
+
 // Workout class that serves as parent to different workout types
 class Workout {
 
@@ -122,8 +123,16 @@ class App {
 
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            zoomSnap: 5,
         }).addTo(this.#map); // Create map layer and append it to map instance
+
+        var latlngs = [[37, -109.05], [41, -109.03], [41, -102.05], [37, -102.04]];
+
+        var polygon = L.polygon(latlngs, { color: 'red' }).addTo(this.#map);
+
+        // zoom the map to the polygon
+        map.fitBounds(polygon.getBounds());
 
         // Handle clicks to open input form
         this.#map.on('click', this._showForm.bind(this));
@@ -161,17 +170,21 @@ class App {
         inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
     }
 
+    _validateInput(...inputs) {
+        return inputs.every(input => Number.isFinite(parseInt(input)));
+    }
+
+    _checkPositive(...inputs) {
+        return inputs.every(input => parseInt(input) > 0);
+    }
+
     _newWorkout(e) { // Creation of new workout
         e.preventDefault();
 
-        // Validate inputs
-        const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(inp));
-        const allPositive = (...inputs) => inputs.every(inp => inp > 0);
-
         const type = inputType.value;
 
-        const distance = parseInt(inputDistance.value);
-        const duration = parseInt(inputDuration.value);
+        const distance = inputDistance.value;
+        const duration = inputDuration.value;
 
         const { lat, lng } = this.#mapEvent.latlng;
 
@@ -181,7 +194,7 @@ class App {
         if (type === 'running') {
             const cadence = parseInt(inputCadence.value);
 
-            if (!validInputs(distance, duration, cadence) || !allPositive(distance, duration, cadence))
+            if (!this._validateInput(distance, duration, cadence) || !this._checkPositive(distance, duration, cadence))
                 return this._errorMessage('Inputs have to be positive numbers!');
 
             workout = new Running([lat, lng], distance, duration, cadence);
@@ -190,7 +203,7 @@ class App {
         if (type === 'cycling') {
             const elevation = parseInt(inputElevation.value);
 
-            if (!validInputs(distance, duration, elevation) || !allPositive(distance, duration))
+            if (!this._validateInput(distance, duration, elevation) || !this._checkPositive(distance, duration))
                 return this._errorMessage('Inputs have to be positive numbers!');
 
             workout = new Cycling([lat, lng], distance, duration, elevation);
@@ -228,16 +241,16 @@ class App {
         this.#allMarkers.push(mark);
     }
 
-    _renderWorkout(workout, edit) {
+    _renderWorkout(workout, element) {
         let html = `
         <li class="workout workout--${workout.type}" data-id="${workout.id}">
         <h2 class="workout__title">${workout.description}</h2>
-        <div class="workout__details">
+        <div class="workout__details__distance">
           <span class="workout__icon">${workout.type === 'running' ? '🏃‍♂️' : '🚴‍♀️'}</span>
           <span class="workout__value">${workout.distance}</span>
           <span class="workout__unit">km</span>
         </div>
-        <div class="workout__details">
+        <div class="workout__details__duration">
           <span class="workout__icon">⏱</span>
           <span class="workout__value">${workout.duration}</span>
           <span class="workout__unit">min</span>
@@ -246,11 +259,11 @@ class App {
         if (workout.type === 'running') {
             html += `
             <div class="workout__details">
-                <span class="workout__icon">⚡️</span>
+                <span class="workout__icon__icon">⚡️</span>
                 <span class="workout__value">${workout.pace.toFixed(1)}</span>
                 <span class="workout__unit">min/km</span>
             </div>
-            <div class="workout__details">
+            <div class="workout__details__cadence">
                 <span class="workout__icon">🦶🏼</span>
                 <span class="workout__value">${workout.cadence}</span>
                 <span class="workout__unit">spm</span>
@@ -261,12 +274,12 @@ class App {
         }
 
         if (workout.type === 'cycling') {
-            html += `<div class="workout__details">
+            html += `<div class="workout__details__speed">
             <span class="workout__icon">⚡️</span>
             <span class="workout__value">${workout.speed.toFixed(1)}</span>
             <span class="workout__unit">km/h</span>
           </div>
-          <div class="workout__details">
+          <div class="workout__details__elevation">
             <span class="workout__icon">⛰</span>
             <span class="workout__value">${workout.elevation}</span>
             <span class="workout__unit">m</span>
@@ -275,8 +288,10 @@ class App {
           <a href="#" class="workout__edit"> EDIT </a>
         </li>`
         }
-
-        form.insertAdjacentHTML('afterend', html);
+        if (this.#currentAction === 'editing') {
+            element.insertAdjacentHTML('afterend', html);
+        }
+        else form.insertAdjacentHTML('afterend', html);
     }
     _containerListen(e) { // When clicked on container either remove workout(When clicked on Delete) or reposition to the workout on map(When clicked on rest of workout class)
         const trg = e.target;
@@ -285,15 +300,14 @@ class App {
             this._deleteWorkout(trg)
         }
 
-
-        const workoutEl = e.target.closest('.workout');
+        const workoutEl = trg.closest('.workout');
 
         if (!workoutEl) return;
 
         const workout = this.#workouts.find(work => work.id === workoutEl.dataset.id);
 
         if (trg.classList[0] === 'workout__edit') {
-            return this._editWorkout(workout)
+            return this._editWorkout(workout, trg)
         }
 
         if (!workout) return;
@@ -307,10 +321,7 @@ class App {
 
     }
 
-    _editWorkout(workout) {
-
-        const validInputs = (...inputs) => inputs.every(inp => Number.isFinite(parseInt(inp)));
-        const allPositive = (...inputs) => inputs.every(inp => parseInt(inp) > 0);
+    _editWorkout(workout, trg) {
 
         this.#currentAction = 'editing';
 
@@ -323,31 +334,36 @@ class App {
 
         discardChangesBtn.addEventListener('click', () => {
             this._hideForm();
+        }, {
+            once: true,
         });
 
         saveChangesBtn.addEventListener('click', (e) => {
 
-            if (validInputs(inputDistance.value, inputDuration.value) && allPositive(inputDistance.value, inputDuration.value)) {
+            if (this._validateInput(inputDistance.value, inputDuration.value) && this._checkPositive(inputDistance.value, inputDuration.value)) {
                 workout.distance = inputDistance.value;
                 workout.duration = inputDuration.value;
-            } else return this._errorMessage('Data must be positive');
+            } else return this._errorMessage('Data must be positive 1');
+
             if (workout.type === 'running') {
-                if (validInputs(inputCadence.value) && allPositive(inputCadence.value)) workout.cadence = inputCadence.value;
-                else return this._errorMessage('Data must be positive');
+                if (this._validateInput(inputCadence.value) && this._checkPositive(inputCadence.value)) workout.cadence = inputCadence.value;
+                else return this._errorMessage('Data must be positive 2');
             }
+
             if (workout.type === 'cycling') {
-                if (validInputs(inputElevation.value) && allPositive(inputElevation.value)) workout.elevation = inputElevation.value;
-                else return this._errorMessage('Data must be positive');
+                if (this._validateInput(inputElevation.value) && this._checkPositive(inputElevation.value)) workout.elevation = inputElevation.value;
+                else return this._errorMessage('Data must be positive 3');
             }
-            this._updateContainer(workout)
+
+            this._renderWorkout(workout, trg.parentElement);
             this._setLocalStorage();
             this._hideForm();
+
+            trg.parentElement.remove();
+        }, {
+            once: true,
         });
 
-    }
-
-    _updateContainer(workout) {
-        location.reload();
     }
 
     _setLocalStorage() {
@@ -420,7 +436,7 @@ class App {
     }
 
     _recenterMap() { // Recenter the map so all workouts can be seen.
-        if (this.#workouts.length === 0) return;
+        if (this.#workouts.length === 0) return this._errorMessage('No added workouts to recenter around');
 
         let tmp = []
 
